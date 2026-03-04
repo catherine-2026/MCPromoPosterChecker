@@ -19,7 +19,31 @@ body {
   max-width: 650px;
   width: 100%;
 }
+/* Visitor Counter Styling */
+.visitor-badge {
+  display: inline-flex;
+  align-items: center;
+  background-color: #e8f0fe; /* Soft Blue */
+  color: #1a73e8; /* Google Blue */
+  padding: 8px 16px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 10px 0 25px 0;
+  border: 1px solid #d2e3fc;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
 
+.visitor-badge .icon {
+  margin-right: 8px;
+  font-size: 1.1rem;
+}
+
+#vCount {
+  margin-left: 5px;
+  color: #174ea6;
+  font-family: 'Courier New', monospace; /* Makes numbers look like a counter */
+}
 /* Header Style */
 .glass-header {
   text-align: center;
@@ -137,6 +161,8 @@ footer {
   margin-top: 60px;
   padding-bottom: 40px;
 }
+
+
 
 .copyright { font-size: 0.85rem; font-weight: bold; color: #3c4043; }
 .legal { font-size: 0.75rem; color: #70757a; line-height: 1.4; margin-top: 10px; }

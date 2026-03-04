@@ -10,46 +10,68 @@
     
   <body>
   <div class="app-container">
-  <div class="glass-header">
+  <header class="glass-header">
     <h1>MC Poster Auditor</h1>
-    <p>Instant Feedback • Bahasa Melayu & English</p>
-  </div>
-
-  <div class="card main-action">
-    <h3>Step 1: Get Your Audit</h3>
-    <p>Done with your promo poster? Get the feedback from here!</p>
-    <a href="https://gemini.google.com/gem/1xWmR0EfGLdH8BZlAUfDAkESd25xVXM92?usp=sharing" target="_blank" class="btn-primary">
-      🚀 Launch Gemini Auditor
-    </a>
-  </div>
-
-  <div class="card form-card">
-    <h3>Step 2: Share & Compare</h3>
-    <p class="subtext">Paste your AI feedback below to help everyone learn.</p>
     
-    <div class="input-group">
-      <input type="text" id="userName" placeholder="Your Full Name" required>
+    <div class="visitor-badge">
+      <span class="icon">👥</span> 
+      Visitor Count: <span id="vCount">0</span>
     </div>
     
-    <div class="input-group">
-      <textarea id="feedbackInput" placeholder="Paste the Gemini feedback here..."></textarea>
+    <p class="tagline">Instant Feedback • Bahasa Melayu & English</p>
+  </header>
+
+  <main>
+    <section class="card main-action">
+      <div class="card-icon">🚀</div>
+      <h3>Step 1: Get Your Audit</h3>
+      <p>Done with your promo poster? Get instant AI feedback right here!</p>
+      <a href="https://gemini.google.com/gem/1xWmR0EfGLdH8BZlAUfDAkESd25xVXM92?usp=sharing" 
+         target="_blank" 
+         class="btn-primary">
+        Launch Gemini Auditor
+      </a>
+    </section>
+
+    <section class="card form-card">
+      <div class="card-icon">📝</div>
+      <h3>Step 2: Share & Compare</h3>
+      <p class="subtext">Paste your AI feedback below to help the community learn.</p>
+      
+      <div class="input-group">
+        <label for="userName">Full Name</label>
+        <input type="text" id="userName" placeholder="Enter your name..." required>
+      </div>
+      
+      <div class="input-group">
+        <label for="feedbackInput">Gemini Feedback</label>
+        <textarea id="feedbackInput" placeholder="Paste the feedback results here..."></textarea>
+      </div>
+      
+      <button onclick="postFeedback()" id="submitBtn" class="btn-secondary">
+        Post to Sharing Pool
+      </button>
+    </section>
+
+    <div class="pool-header">
+      <span>Feedback Sharing Pool</span>
+      <div class="line"></div>
     </div>
-    
-    <button onclick="postFeedback()" id="submitBtn" class="btn-secondary">Post to Sharing Pool</button>
-  </div>
 
-  <div class="pool-header">
-    <span>Feedback Sharing Pool</span>
-    <div class="line"></div>
-  </div>
-
-  <div id="forumPosts" class="posts-container">
-    <p class="status-msg">Loading community insights...</p>
-  </div>
+    <div id="forumPosts" class="posts-container">
+      <p class="status-msg">Loading community insights...</p>
+    </div>
+  </main>
 
   <footer>
-    <p class="copyright">Copyright © 2026 [Catherine N.C.L]. All Rights Reserved.</p>
-    <p class="legal">No part of this application, including code, questions, and graphical assets, may be reproduced, distributed, or transmitted in any form or by any means without the prior written permission of the author.</p>
+    <div class="footer-content">
+      <p class="copyright">Copyright © 2026 [Catherine N.C.L]. All Rights Reserved.</p>
+      <p class="legal">
+        No part of this application, including code, questions, and graphical assets, 
+        may be reproduced, distributed, or transmitted in any form or by any means 
+        without the prior written permission of the author.
+      </p>
+    </div>
   </footer>
 </div>
     <script  src="./script.js"></script>
