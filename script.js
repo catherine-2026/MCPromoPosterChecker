@@ -1,53 +1,54 @@
 const scriptURL = 'https://script.google.com/macros/s/AKfycbyI7epkmu6iA40X-AymuuYDPWuNXo9CHtjSmRFqXePthWq0g-bHTonazKJExyr1_Ie-/exec';
 
-// Globalize for CodePen's HTML
+// Force the function to be global for CodePen
 window.postFeedback = postFeedback;
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("MC Auditor: Initializing Live Sync...");
+  console.log("App Initialized - Syncing Pool...");
   loadData();
 });
 
 /**
- * FETCHES LATEST RECORDS
+ * FETCH DATA FROM GOOGLE
  */
 function loadData() {
   const container = document.getElementById('forumPosts');
   const vDisplay = document.getElementById('vCount');
 
-  if (container) container.innerHTML = '<p style="text-align:center; color:#888;">Updating pool from Google Sheets...</p>';
+  if (container) {
+    container.innerHTML = '<p style="text-align:center; color:#888;">Updating pool from Google Sheets...</p>';
+  }
 
-  // Cache-busting: 't=' and 'cache: no-store' forces Google to bypass the 0 count
-  fetch(`${scriptURL}?t=${Date.now()}`, { 
-    method: 'GET',
-    cache: 'no-store' 
-  })
+  // Use a unique timestamp to force the browser to get the NEW data you saw in your browser tab
+  fetch(`${scriptURL}?nocache=${Date.now()}`)
     .then(res => res.json())
     .then(data => {
-      console.log("Records Found:", data.feedback ? data.feedback.length : 0);
-      
+      console.log("Live Sync Successful:", data);
+
+      // Update Visitor Count
       if (vDisplay) vDisplay.innerText = data.count || "1";
 
+      // Update Sharing Pool
       if (container) {
         container.innerHTML = ""; 
+        
         if (data.feedback && data.feedback.length > 0) {
-          // Filter rows that have at least a Name (Index 0) and Feedback (Index 1)
-          const activePosts = data.feedback.filter(row => row[0] && row[1]);
-          
-          activePosts.reverse().forEach(row => renderPost(row[0], row[1], row[2]));
+          // Reverse to show newest at the top
+          const entries = [...data.feedback].reverse();
+          entries.forEach(row => renderPost(row[0], row[1], row[2]));
         } else {
-          container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">The database is connected but no posts were found.</p>';
+          container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Connected! But no rows were detected in the sheet.</p>';
         }
       }
     })
     .catch(err => {
-      console.error("Fetch Error:", err);
-      if (container) container.innerHTML = '<p style="text-align:center; color:red;">Sync Error. Please check your Script URL.</p>';
+      console.error("Sync Error:", err);
+      if (container) container.innerHTML = '<p style="text-align:center; color:red;">Sync Error. Please refresh.</p>';
     });
 }
 
 /**
- * SUBMITS NEW RECORD
+ * POST NEW FEEDBACK
  */
 function postFeedback() {
   const nameInput = document.getElementById('userName');
@@ -60,7 +61,7 @@ function postFeedback() {
   }
 
   btn.disabled = true;
-  btn.innerText = "Writing to Sheet...";
+  btn.innerText = "Saving...";
 
   fetch(scriptURL, { 
     method: 'POST', 
@@ -68,18 +69,19 @@ function postFeedback() {
     body: JSON.stringify({ name: nameInput.value.trim(), feedback: feedInput.value.trim() }) 
   })
   .then(() => {
-    alert("Record updated in Google Sheet!");
-    
-    // Optimistic UI Update: Show the post immediately
+    // Show success
     renderPost(nameInput.value, feedInput.value, "Just now");
     
+    // Clear & Reset
     nameInput.value = "";
     feedInput.value = "";
     btn.disabled = false;
     btn.innerText = "Post to Sharing Pool";
     
-    // Refresh the whole pool after 2.5 seconds to sync
-    setTimeout(loadData, 2500);
+    alert("Record updated successfully!");
+    
+    // Refresh the pool after 2 seconds to sync visitor count
+    setTimeout(loadData, 2000);
   })
   .catch(err => {
     console.error("Post Error:", err);
@@ -95,8 +97,9 @@ function renderPost(name, text, time) {
   const container = document.getElementById('forumPosts');
   if (!container) return;
   
+  // Remove "no rows" message if present
   const emptyMsg = container.querySelector('p');
-  if (emptyMsg && emptyMsg.innerText.includes("no posts")) emptyMsg.remove();
+  if (emptyMsg && emptyMsg.innerText.includes("Connected")) emptyMsg.remove();
 
   const post = document.createElement('div');
   post.style = "background:#fff; border:1px solid #eee; border-left:5px solid #007bff; padding:15px; margin-bottom:12px; border-radius:6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align:left;";
