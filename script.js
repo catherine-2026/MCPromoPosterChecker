@@ -1,27 +1,29 @@
 const scriptURL = 'https://script.google.com/macros/s/AKfycbyI7epkmu6iA40X-AymuuYDPWuNXo9CHtjSmRFqXePthWq0g-bHTonazKJExyr1_Ie-/exec';
 
-// 1. Force the function to be global so CodePen's HTML 'onclick' can find it
+// Force the function to be global so CodePen's HTML can find it
 window.postFeedback = postFeedback;
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("System Initialized");
+  console.log("System Syncing...");
   loadData();
 });
 
 /**
- * FETCHES VISITOR COUNT & SHARING POOL
+ * 1. LOAD DATA (VISITS + ALL POSTS)
  */
 function loadData() {
   const container = document.getElementById('forumPosts');
   const vDisplay = document.getElementById('vCount');
 
-  if (container) container.innerHTML = '<p style="text-align:center; color:#666;">Syncing pool...</p>';
+  if (container) {
+    container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Fetching community pool...</p>';
+  }
 
-  // Cache-busting: Adds a timestamp so Google sends FRESH data, not a saved 0
+  // Adding a unique timestamp (?t=) forces Google to send FRESH data, not a cached 0
   fetch(`${scriptURL}?t=${Date.now()}`)
     .then(res => res.json())
     .then(data => {
-      console.log("Data Received:", data);
+      console.log("Global Data Received:", data);
 
       // Update Visitor Count
       if (vDisplay) vDisplay.innerText = data.count || "1";
@@ -30,98 +32,93 @@ function loadData() {
       if (container) {
         container.innerHTML = ""; 
         if (data.feedback && data.feedback.length > 0) {
-          // Filter out empty rows and reverse (newest first)
-          const validPosts = data.feedback.filter(row => row[0] && row[1]);
-          validPosts.reverse().forEach(row => renderPost(row[0], row[1], row[2]));
+          // Show newest posts at the top
+          const validEntries = [...data.feedback].reverse();
+          validEntries.forEach(row => renderPost(row[0], row[1], row[2]));
         } else {
-          container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">The pool is currently empty.</p>';
+          container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">The pool is currently empty. Be the first!</p>';
         }
       }
     })
     .catch(err => {
-      console.error("Load Error:", err);
-      if (container) container.innerHTML = '<p style="text-align:center; color:red;">Connection Error. Refresh page.</p>';
+      console.error("Connection Error:", err);
+      if (container) container.innerHTML = '<p style="text-align:center; color:red;">Sync error. Please refresh.</p>';
     });
 }
 
 /**
- * SENDS POST TO GOOGLE SHEETS
+ * 2. POST FEEDBACK
  */
 function postFeedback() {
   const nameInput = document.getElementById('userName');
-  const feedbackInput = document.getElementById('feedbackInput');
+  const feedInput = document.getElementById('feedbackInput');
   const btn = document.getElementById('submitBtn');
 
   const nameVal = nameInput.value.trim();
-  const feedbackVal = feedbackInput.value.trim();
+  const feedVal = feedInput.value.trim();
 
-  if (!nameVal || !feedbackVal) {
+  if (!nameVal || !feedVal) {
     alert("Please fill in both fields!");
     return;
   }
 
   btn.disabled = true;
-  btn.innerText = "Sharing...";
-
-  const payload = JSON.stringify({ 
-    name: nameVal, 
-    feedback: feedbackVal 
-  });
+  btn.innerText = "Sharing to Pool...";
 
   fetch(scriptURL, { 
     method: 'POST', 
     mode: 'no-cors', // Essential for Google Apps Script
-    body: payload 
+    body: JSON.stringify({ name: nameVal, feedback: feedVal }) 
   })
   .then(() => {
-    alert("Shared successfully!");
+    alert("Successfully shared with the community!");
     
-    // Add to UI immediately (Optimistic Update)
-    renderPost(nameVal, feedbackVal, "Just now");
-
-    // Clear form
+    // Add to UI immediately
+    renderPost(nameVal, feedVal, "Just now");
+    
+    // Reset Form
     nameInput.value = "";
-    feedbackInput.value = "";
+    feedInput.value = "";
     btn.disabled = false;
     btn.innerText = "Post to Sharing Pool";
-
-    // Refresh data after 2 seconds to sync visitor count
+    
+    // Full sync after 2 seconds to update visitor count
     setTimeout(loadData, 2000);
   })
   .catch(err => {
     console.error("Post Error:", err);
-    alert("Failed to share. Check your connection.");
+    alert("Error sharing. Check your connection.");
     btn.disabled = false;
     btn.innerText = "Post to Sharing Pool";
   });
 }
 
 /**
- * CREATES THE POST HTML
+ * 3. RENDER POST HTML
  */
 function renderPost(name, text, time) {
   const container = document.getElementById('forumPosts');
   if (!container) return;
   
-  // Remove "empty" message if it exists
+  // Remove empty message if it exists
   const emptyMsg = container.querySelector('p');
   if (emptyMsg && emptyMsg.innerText.includes("empty")) emptyMsg.remove();
 
   const post = document.createElement('div');
-  post.style = "background:#f9f9f9; border-left:4px solid #3498db; padding:15px; margin-bottom:15px; border-radius:4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align:left;";
+  post.style = "background:#fff; border:1px solid #eee; border-left:5px solid #3498db; padding:15px; margin-bottom:12px; border-radius:6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align:left;";
   
-  let displayTime = time;
+  let dTime = time;
   if (time !== "Just now" && time) {
     const d = new Date(time);
-    displayTime = isNaN(d) ? time : d.toLocaleDateString();
+    dTime = isNaN(d) ? time : d.toLocaleDateString();
   }
 
   post.innerHTML = `
-    <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:5px;">
+    <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #f4f4f4; padding-bottom:5px;">
       <span style="font-weight:bold; color:#2c3e50;">👤 ${name}</span>
-      <span style="font-size:0.8em; color:#95a5a6;">${displayTime}</span>
+      <span style="font-size:0.85em; color:#95a5a6;">${dTime}</span>
     </div>
-    <div style="white-space:pre-wrap; font-size:0.95em; color:#34495e;">${text}</div>
+    <div style="white-space:pre-wrap; font-size:0.95em; line-height:1.4; color:#34495e;">${text}</div>
   `;
   container.prepend(post);
 }
