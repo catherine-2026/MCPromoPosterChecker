@@ -1,87 +1,91 @@
-const scriptURL = 'https://script.google.com/macros/s/AKfycbyI7epkmu6iA40X-AymuuYDPWuNXo9CHtjSmRFqXePthWq0g-bHTonazKJExyr1_Ie-/exec';
-
+// 1. GLOBAL REGISTRATION - This fixes the "ReferenceError"
 window.postFeedback = postFeedback;
 
-document.addEventListener("DOMContentLoaded", () => loadData());
+const scriptURL = 'https://script.google.com/macros/s/AKfycbyI7epkmu6iA40X-AymuuYDPWuNXo9CHtjSmRFqXePthWq0g-bHTonazKJExyr1_Ie-/exec';
+
+// 2. INITIAL LOAD
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("System Online. Syncing...");
+  loadData();
+});
 
 function loadData() {
   const container = document.getElementById('forumPosts');
   const vDisplay = document.getElementById('vCount');
 
-  // cache-busting ensures fresh data
   fetch(`${scriptURL}?t=${Date.now()}`)
     .then(res => res.json())
     .then(data => {
       if (vDisplay) vDisplay.innerText = data.count || "1";
-
-      // SAFETY GUARD: Only refresh the pool if Google actually sends posts back
-      if (data.feedback && data.feedback.length > 0) {
-        container.innerHTML = ""; // Clear only now because we have data to show
-        [...data.feedback].reverse().forEach(row => renderPost(row[0], row[1], row[2]));
-      } else {
-        console.log("Google returned 0 posts. Keeping current screen as is.");
+      if (container && data.feedback) {
+        container.innerHTML = "";
+        [...data.feedback].reverse().forEach(row => {
+          if(row[0]) renderPost(row[0], row[1], row[2]);
+        });
       }
     })
-    .catch(err => console.error("Sync Error:", err));
+    .catch(err => console.error("Load Error:", err));
 }
 
+// 3. THE POST FUNCTION
 function postFeedback() {
-  const nameInput = document.getElementById('userName');
-  const feedInput = document.getElementById('feedbackInput');
+  const nameBox = document.getElementById('userName');
+  const feedBox = document.getElementById('feedbackInput');
   const btn = document.getElementById('submitBtn');
 
-  const nameVal = nameInput.value.trim();
-  const feedVal = feedInput.value.trim();
+  const name = nameBox.value.trim();
+  const feedback = feedBox.value.trim();
 
-  if (!nameVal || !feedVal) return alert("Fill both fields!");
+  if (!name || !feedback) {
+    alert("Please enter both Name and Feedback!");
+    return;
+  }
 
   btn.disabled = true;
-  btn.innerText = "Saving...";
+  btn.innerText = "Sharing...";
 
-  // 1. POST to Google
-  fetch(scriptURL, { 
-    method: 'POST', 
+  // Sending data to Google
+  fetch(scriptURL, {
+    method: 'POST',
     mode: 'no-cors', 
-    body: JSON.stringify({ name: nameVal, feedback: feedVal }) 
+    cache: 'no-cache',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name, feedback: feedback })
   })
   .then(() => {
-    // 2. SHOW LOCAL COPY (This stays on screen)
-    renderPost(nameVal, feedVal, "Just now");
+    alert("Shared successfully!");
+    renderPost(name, feedback, "Just now");
     
-    // 3. CLEAN UP
-    nameInput.value = "";
-    feedInput.value = "";
+    // Reset Form
+    nameBox.value = "";
+    feedBox.value = "";
     btn.disabled = false;
     btn.innerText = "Post to Sharing Pool";
     
-    // 4. DELAYED SYNC (Wait 4 seconds for Google to finish writing)
-    setTimeout(loadData, 4000);
+    // Refresh database view after 3 seconds
+    setTimeout(loadData, 3000);
+  })
+  .catch(err => {
+    console.error("Post Error:", err);
+    alert("Connection Error. Check your script URL.");
+    btn.disabled = false;
+    btn.innerText = "Post to Sharing Pool";
   });
 }
 
 function renderPost(name, text, time) {
   const container = document.getElementById('forumPosts');
   if (!container) return;
-
-  // Remove "No records" or "Syncing" text if it exists
-  const status = container.querySelector('p');
-  if (status) status.remove();
-
+  
   const post = document.createElement('div');
-  post.style = "background:#fff; border-left:5px solid #007bff; padding:15px; margin-bottom:12px; border-radius:6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align:left;";
+  post.style = "background:white; border-left:5px solid #007bff; padding:15px; margin-bottom:10px; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,0.1); text-align:left;";
   
   let dTime = time;
-  if (time !== "Just now" && time) {
+  if (time && time !== "Just now") {
     const d = new Date(time);
     dTime = isNaN(d) ? time : d.toLocaleDateString();
   }
 
-  post.innerHTML = `
-    <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #f4f4f4; padding-bottom:5px;">
-      <span style="font-weight:bold; color:#333;">👤 ${name}</span>
-      <span style="font-size:0.85em; color:#999;">${dTime}</span>
-    </div>
-    <div style="white-space:pre-wrap; font-size:0.95em; color:#555; line-height:1.4;">${text}</div>
-  `;
+  post.innerHTML = `<strong>👤 ${name}</strong> <span style="float:right; color:gray; font-size:0.8em;">${dTime}</span><br><p style="margin-top:5px; color:#444;">${text}</p>`;
   container.prepend(post);
 }
