@@ -1,111 +1,105 @@
 const scriptURL = 'https://script.google.com/macros/s/AKfycbyI7epkmu6iA40X-AymuuYDPWuNXo9CHtjSmRFqXePthWq0g-bHTonazKJExyr1_Ie-/exec';
 
-// Force the function to be global so CodePen's HTML can find it
+// Globalize for CodePen's HTML
 window.postFeedback = postFeedback;
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("System Syncing...");
+  console.log("MC Auditor: Initializing Live Sync...");
   loadData();
 });
 
 /**
- * 1. LOAD DATA (VISITS + ALL POSTS)
+ * FETCHES LATEST RECORDS
  */
 function loadData() {
   const container = document.getElementById('forumPosts');
   const vDisplay = document.getElementById('vCount');
 
-  if (container) {
-    container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Fetching community pool...</p>';
-  }
+  if (container) container.innerHTML = '<p style="text-align:center; color:#888;">Updating pool from Google Sheets...</p>';
 
-  // Adding a unique timestamp (?t=) forces Google to send FRESH data, not a cached 0
-  fetch(`${scriptURL}?t=${Date.now()}`)
+  // Cache-busting: 't=' and 'cache: no-store' forces Google to bypass the 0 count
+  fetch(`${scriptURL}?t=${Date.now()}`, { 
+    method: 'GET',
+    cache: 'no-store' 
+  })
     .then(res => res.json())
     .then(data => {
-      console.log("Global Data Received:", data);
-
-      // Update Visitor Count
+      console.log("Records Found:", data.feedback ? data.feedback.length : 0);
+      
       if (vDisplay) vDisplay.innerText = data.count || "1";
 
-      // Update Sharing Pool
       if (container) {
         container.innerHTML = ""; 
         if (data.feedback && data.feedback.length > 0) {
-          // Show newest posts at the top
-          const validEntries = [...data.feedback].reverse();
-          validEntries.forEach(row => renderPost(row[0], row[1], row[2]));
+          // Filter rows that have at least a Name (Index 0) and Feedback (Index 1)
+          const activePosts = data.feedback.filter(row => row[0] && row[1]);
+          
+          activePosts.reverse().forEach(row => renderPost(row[0], row[1], row[2]));
         } else {
-          container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">The pool is currently empty. Be the first!</p>';
+          container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">The database is connected but no posts were found.</p>';
         }
       }
     })
     .catch(err => {
-      console.error("Connection Error:", err);
-      if (container) container.innerHTML = '<p style="text-align:center; color:red;">Sync error. Please refresh.</p>';
+      console.error("Fetch Error:", err);
+      if (container) container.innerHTML = '<p style="text-align:center; color:red;">Sync Error. Please check your Script URL.</p>';
     });
 }
 
 /**
- * 2. POST FEEDBACK
+ * SUBMITS NEW RECORD
  */
 function postFeedback() {
   const nameInput = document.getElementById('userName');
   const feedInput = document.getElementById('feedbackInput');
   const btn = document.getElementById('submitBtn');
 
-  const nameVal = nameInput.value.trim();
-  const feedVal = feedInput.value.trim();
-
-  if (!nameVal || !feedVal) {
+  if (!nameInput.value.trim() || !feedInput.value.trim()) {
     alert("Please fill in both fields!");
     return;
   }
 
   btn.disabled = true;
-  btn.innerText = "Sharing to Pool...";
+  btn.innerText = "Writing to Sheet...";
 
   fetch(scriptURL, { 
     method: 'POST', 
-    mode: 'no-cors', // Essential for Google Apps Script
-    body: JSON.stringify({ name: nameVal, feedback: feedVal }) 
+    mode: 'no-cors', 
+    body: JSON.stringify({ name: nameInput.value.trim(), feedback: feedInput.value.trim() }) 
   })
   .then(() => {
-    alert("Successfully shared with the community!");
+    alert("Record updated in Google Sheet!");
     
-    // Add to UI immediately
-    renderPost(nameVal, feedVal, "Just now");
+    // Optimistic UI Update: Show the post immediately
+    renderPost(nameInput.value, feedInput.value, "Just now");
     
-    // Reset Form
     nameInput.value = "";
     feedInput.value = "";
     btn.disabled = false;
     btn.innerText = "Post to Sharing Pool";
     
-    // Full sync after 2 seconds to update visitor count
-    setTimeout(loadData, 2000);
+    // Refresh the whole pool after 2.5 seconds to sync
+    setTimeout(loadData, 2500);
   })
   .catch(err => {
     console.error("Post Error:", err);
-    alert("Error sharing. Check your connection.");
     btn.disabled = false;
     btn.innerText = "Post to Sharing Pool";
   });
 }
 
 /**
- * 3. RENDER POST HTML
+ * UI RENDERER
  */
 function renderPost(name, text, time) {
   const container = document.getElementById('forumPosts');
   if (!container) return;
   
-  // Remove empty message if it exists
   const emptyMsg = container.querySelector('p');
-  if (emptyMsg && emptyMsg.innerText.includes("empty")) emptyMsg.remove();
+  if (emptyMsg && emptyMsg.innerText.includes("no posts")) emptyMsg.remove();
 
   const post = document.createElement('div');
-  post.style = "background:#fff; border:1px solid #eee; border-left:5px solid #3498db; padding:15px; margin-bottom:12px; border-radius:6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align:left;";
+  post.style = "background:#fff; border:1px solid #eee; border-left:5px solid #007bff; padding:15px; margin-bottom:12px; border-radius:6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align:left;";
   
   let dTime = time;
   if (time !== "Just now" && time) {
@@ -115,10 +109,10 @@ function renderPost(name, text, time) {
 
   post.innerHTML = `
     <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid #f4f4f4; padding-bottom:5px;">
-      <span style="font-weight:bold; color:#2c3e50;">👤 ${name}</span>
-      <span style="font-size:0.85em; color:#95a5a6;">${dTime}</span>
+      <span style="font-weight:bold; color:#333;">👤 ${name}</span>
+      <span style="font-size:0.85em; color:#999;">${dTime}</span>
     </div>
-    <div style="white-space:pre-wrap; font-size:0.95em; line-height:1.4; color:#34495e;">${text}</div>
+    <div style="white-space:pre-wrap; font-size:0.95em; color:#555; line-height:1.4;">${text}</div>
   `;
   container.prepend(post);
 }
